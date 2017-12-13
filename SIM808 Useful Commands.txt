@@ -1,0 +1,45 @@
+General
+	Stop echoing
+		ATE0
+	Start echoing
+		ATE
+	Functional verification
+		AT+CFUN?
+	SIM verification	
+		AT+CPIN?
+	Connection registration verification
+		AT+CREG?
+
+Connecting to GPRS
+	Set up connection type (2nd parameter is the connection profile no)
+		AT+SAPBR=3,1,"Contype","GPRS"
+	Start connection
+		AT+SAPBR =1,1
+	See whether connection is okay
+		AT+SAPBR =2,1
+
+Time server
+	Select time server connection profile
+		AT+CNTPCID=1
+	Select time server
+		AT+CNTP="pool.ntp.org",22
+	Synchronize local clock
+		AT+CNTP
+	Get local clock
+		AT+CCLK?
+
+HTTP connection
+	Enable HTTP mode
+		AT+HTTPINIT 
+	Set HTTP bearer profile no
+		AT+HTTPPARA="CID",1
+	Set the url  to the address of the webpage you want to access
+		AT+HTTPPARA="URL","http://marsinnovations.in/testout.php" 
+	Start the GET session
+		AT+HTTPACTION=0	
+	Read the result of the GET session
+		AT+HTTPREAD
+
+
+
+
