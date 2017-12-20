@@ -417,6 +417,7 @@ void displayMessage(String text, int text_size) {
   } else {
     disp.fillScreen(ILI9340_GREEN);
     disp.setCursor(0, 0);
+    textline = 0;
   }
   
   disp.println(text);
