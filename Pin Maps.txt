@@ -1,0 +1,56 @@
+SIM808 		
+	+ RX			Due- TX1			
+	+ TX			Due- RX1
+	+ 5V			Power 5V
+	+ GND			Power GND
+	+ PWR_BTN		Due- flex
+	
+SensorA (Connect through special port)
+	+ 5V 			Power 5V
+	+ GND			Power GND
+	+ ENB			Due- flex
+	+ RST			Due- flex
+	+ RX			Due- TX2
+	+ TX			Due- RX2
+
+SensorB (Connect through special port)
+	+ 5V 			Power 5V
+	+ GND			Power GND
+	+ ENB			Due- flex
+	+ RST			Due- flex
+	+ RX			Due- TX3
+	+ TX			Due- RX3
+
+Display
+	+ MISO			Due- flex
+	+ LED (3.3V)	3.3V Through Switch 
+	+ MOSI			Due- flex
+	+ D/C			Due- flex
+	+ RST			Due- flex
+	+ CS			Due- flex
+	+ GND			Power GND
+	+ 3.3V			Power 3.3V
+	+ SCK			Due- flex
+	
+SD Card
+	+ MISO			Due- flex
+	+ MOSI			Due- flex
+	+ SCK			Due- flex
+	+ CS			Due- flex
+	+ GND			Power GND
+	+ 3.3V			Power 3.3V
+	
+Arduino Due
+	+ 5V			Power 5V
+	+ GND			Power GND
+	+ 3.3V OUT		Power 3.3V
+	Reserved - RX0, TX0
+	
+Power cable (USB port)
+	+ 5V			5V Through Switch + Protection
+	+ GND			Power GND
+	
+Indicator Lights
+	+ Power bulb
+	
+	
