@@ -72,7 +72,7 @@ void setup() {
   // SPI port to display
   disp.begin();
   disp.fillScreen(ILI9340_BLACK);
-  disp.setRotation(0);
+  disp.setRotation(1);
   disp.setCursor(0, 0);
   
   // Serial port to computer
@@ -87,16 +87,9 @@ void setup() {
   Serial1.begin(9600);
   initializeGSM();
 
-  // Display Time
-  while(!getTime()){
-    delay(1000);
-  }
-
   // Settle down
   delay(6000);
-  disp.fillScreen(ILI9340_GREEN);
-  disp.setCursor(0, 0);
-  textline = 0;
+  
 }
 
 void loop() {
@@ -109,6 +102,8 @@ void loop() {
   int sen2_pm10_avg = 0;
   int sen2_pm25_avg = 0;
   int sen2_corr = 0;
+
+  displayMessage("Collecting data from sensors...", 2);
   
   for (int i = 0; i < TOTAL_READING; i++) {
     sen1_status[i] = sensorDataAvailable_1();
@@ -128,93 +123,111 @@ void loop() {
   }
 
   // Display Time
-  bool time_avail = getTime();
+  while (!getTime()) {
+    initializeGSM();
+  }
   
   if (sen1_corr > CORR_READING) {
     sen1_pm25_avg = sen1_pm25_avg / sen1_corr;
     sen1_pm10_avg = sen1_pm10_avg / sen1_corr;
     
-    String text = "Sen A - PM2.5 : ";
-    text = text + sen1_pm25_avg + ", PM10 : " + sen1_pm10_avg + ", smpl : " + sen1_corr;
-    displayMessage(text , TEXT_SIZE);
+    String text = "SenA - PM2.5:";
+    text = text + sen1_pm25_avg + "\r\n       PM10:" + sen1_pm10_avg + "\r\n       smpl:" + sen1_corr;
+    displayMessage(text , 2);
   } else {
-    String text = "Sen A : Only ";
+    String text = "SenA : Only ";
     text = text + sen1_corr + " data is correct";
-    displayMessage(text , TEXT_SIZE);
+    displayMessage(text , 2);
     text = "Log : ";
     for (int i = 0; i < TOTAL_READING; i++) {
       text = text + sen1_status[i]; 
     }
-    displayMessage(text, TEXT_SIZE);
+    displayMessage(text, 2);
   }
 
   if (sen2_corr > CORR_READING) {
     sen2_pm25_avg = sen2_pm25_avg / sen2_corr;
     sen2_pm10_avg = sen2_pm10_avg / sen2_corr;
     
-    String text = "Sen B - PM2.5 : ";
-    text = text + sen2_pm25_avg + ", PM10 : " + sen2_pm10_avg + ", smpl : " + sen2_corr;
-    displayMessage(text , TEXT_SIZE);
+    String text = "SenB - PM2.5:";
+    text = text + sen2_pm25_avg + "\r\n       PM10:" + sen2_pm10_avg + "\r\n       smpl:" + sen2_corr;
+    displayMessage(text , 2);
   } else {
-    String text = "Sen B : Only ";
+    String text = "SenB : Only ";
     text = text + sen2_corr + " data is correct";
-    displayMessage(text , TEXT_SIZE);
+    displayMessage(text , 2);
     text = "Log : ";
     for (int i = 0; i < TOTAL_READING; i++) {
       text = text + sen2_status[i]; 
     }
-    displayMessage(text, TEXT_SIZE);
+    displayMessage(text, 2);
   }
 
+  
   delay(10000);
-
+  disp.fillScreen(ILI9340_GREEN);
+  disp.setCursor(0, 0);
+  textline = 0;
+   
 }
 
 // Initializes the GSM module
 void initializeGSM(){
+  disp.fillScreen(ILI9340_BLACK);
+  disp.setCursor(0, 0);
+  textline = 0;
+  
   String response = "";
 
-  // GSM echo mode off
-  sendData("ATE0", TIMEOUT_GSM, 1);
-  delay(1000);
-  
   // GSM operation verification
   displayMessage("GSM Verifying...", TEXT_SIZE);
   while (1){
+    // GSM echo mode off
+    sendData("ATE0", TIMEOUT_GSM, 1);
+    delay(1000);
+
+    // POST on GSM module
     response = sendData("AT+CFUN?", TIMEOUT_GSM, 1);
     if (response.equals("\r\n+CFUN: 1\r\n\r\nOK\r\n")){
+      // SIM functional verification
       response = sendData("AT+CPIN?", TIMEOUT_GSM, 1);
       if (response.equals("\r\n+CPIN: READY\r\n\r\nOK\r\n")){
         displayMessage("GSM module functional", TEXT_SIZE);
-        break;  
+        
+        // Register with the service provider
+        displayMessage("Connecting...", TEXT_SIZE);
+        for (int i = 0; i < 3; i++) {
+          response = sendData("AT+CREG?", TIMEOUT_GSM, 1);
+          if (response.equals("\r\n+CREG: 0,1\r\n\r\nOK\r\n")){
+            displayMessage("Connection established", TEXT_SIZE);
+            
+            // Establish GPRS connection and get the time
+            displayMessage("GPRS connecting...", TEXT_SIZE);
+            for (int j = 0; j < 3; j++) {
+              if (connectGPRS() & getTime()) {
+                displayMessage("GSM functional!!", TEXT_SIZE);
+                delay(1000);
+
+                // Refreshing display
+                disp.fillScreen(ILI9340_GREEN);
+                disp.setCursor(0, 0);
+                textline = 0; 
+                return; 
+              } else {
+                displayMessage("Time syncing failed!! Retrying...", TEXT_SIZE);
+                delay(1000);
+              }
+            }
+          } else {
+            displayMessage("Connection error!! Retrying...", TEXT_SIZE);
+            delay(1000); 
+          }
+        }
       }
     } 
     displayMessage("GSM module error!! Retrying...", TEXT_SIZE);
     delay(1000); 
   }
-  
-  // Register with the service provider
-  displayMessage("Connection verifying...", TEXT_SIZE);
-  while (1){
-    response = sendData("AT+CREG?", TIMEOUT_GSM, 1);
-    if (response.equals("\r\n+CREG: 0,1\r\n\r\nOK\r\n")){
-      displayMessage("Connection established", TEXT_SIZE);
-      break;
-    }
-    displayMessage("Connection error!! Retrying...", TEXT_SIZE);
-    delay(1000); 
-  }
- 
-  // Establish GPRS connection and get the time
-  displayMessage("GPRS connecting...", TEXT_SIZE);
-  while(1){
-    if (connectGPRS()){
-      break;
-    } 
-    displayMessage("Time syncing failed!! Retrying...", TEXT_SIZE);
-    delay(1000);
-  }
-
 }
 
 bool getTime(){
@@ -231,7 +244,7 @@ bool getTime(){
     second = response.substring(25, 27).toInt();
     
     String text = "";
-    text = text + "Time is " + hour + ":" + minute + ":" + second + " on " + year + "/" + month + "/" + day;
+    text = text + "Time " + hour + ":" + minute + ":" + second + " on " + year + "/" + month + "/" + day;
     displayMessage(text, TEXT_SIZE);
     return true;
   } else {
@@ -412,7 +425,7 @@ void displayMessage(String text, int text_size) {
   disp.setTextSize(text_size);
   disp.setTextColor(ILI9340_BLUE);
     
-  if (textline < 35) {
+  if (textline < 25) {
     textline = textline + text_size;
   } else {
     disp.fillScreen(ILI9340_GREEN);
