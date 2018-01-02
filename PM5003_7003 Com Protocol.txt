@@ -36,3 +36,11 @@ NumPart 5.0um	00 07
 NumPart 10um	00 04 
 CRC		04 82 
 
+SDS023
+
+Header C0 AA 
+PM2.5  81 2 
+PM10  207 2 
+ID    181 5 
+Chck  222 
+Tail  171

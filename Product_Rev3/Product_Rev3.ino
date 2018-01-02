@@ -34,8 +34,8 @@ int TIMEOUT_SEN = 1500;   // Timeout period for sensor reading
 int TIMEOUT_GSM = 1000;   // Timeout period for GSM module
 int TEXT_SIZE = 1;        // Display text size
 
-int SEN_A_ID = 10001;     // Unique ID for sensor A
-int SEN_B_ID = 10002;     // Unique ID for sensor B
+int SEN_A_ID = 10003;     // Unique ID for sensor A
+int SEN_B_ID = 10004;     // Unique ID for sensor B
 
 // Sensor types
 int sen1 = 7003;
@@ -52,7 +52,9 @@ int sen1_pm10_avg = 0;
 int sen1_pm25_avg = 0;
 int sen2_pm10_avg = 0;
 int sen2_pm25_avg = 0;
-  
+int sen1_corr = 0;
+int sen2_corr = 0;
+
 // Date and time
 int year = 0;
 int month = 0;
@@ -105,12 +107,12 @@ void loop() {
   int sen1_status[TOTAL_READING];
   sen1_pm10_avg = 0;
   sen1_pm25_avg = 0;
-  int sen1_corr = 0;
+  sen1_corr = 0;
 
   int sen2_status[TOTAL_READING];
   sen2_pm10_avg = 0;
   sen2_pm25_avg = 0;
-  int sen2_corr = 0;
+  sen2_corr = 0;
 
   displayMessage("Collecting data from sensors...", TEXT_SIZE);
   
@@ -173,27 +175,31 @@ void loop() {
   }
 
   // Sending data to server
-  displayMessage("Sensor 1 sending to server...", TEXT_SIZE);
-  for (int i = 0; i < 3; i++) {
-    if (sendDataToServer(SEN_A_ID ,sen1_pm10_avg, sen1_pm25_avg)){
-      displayMessage("Data 1 sent to server!!", TEXT_SIZE);
-      break;
-    } else {
-      displayMessage("Server connection failed, retrying...", TEXT_SIZE);
-      delay(1000);
-      initializeGSM();
+  if (sen1_corr > CORR_READING) {
+    displayMessage("Sensor 1 sending to server...", TEXT_SIZE);
+    for (int i = 0; i < 3; i++) {
+      if (sendDataToServer(SEN_A_ID ,sen1_pm10_avg, sen1_pm25_avg, sen1_corr)){
+        displayMessage("Data 1 sent to server!!", TEXT_SIZE);
+        break;
+      } else {
+        displayMessage("Server connection failed, retrying...", TEXT_SIZE);
+        delay(1000);
+        initializeGSM();
+      }
     }
   }
 
-  displayMessage("Sensor 2 sending to server...", TEXT_SIZE);
-  for (int i = 0; i < 3; i++) {
-    if (sendDataToServer(SEN_B_ID ,sen2_pm10_avg, sen2_pm25_avg)){
-      displayMessage("Data 2 sent to server!!", TEXT_SIZE);
-      break;
-    } else {
-      displayMessage("Server connection failed, retrying...", TEXT_SIZE);
-      delay(1000);
-      initializeGSM();
+  if (sen1_corr > CORR_READING) {
+    displayMessage("Sensor 2 sending to server...", TEXT_SIZE);
+    for (int i = 0; i < 3; i++) {
+      if (sendDataToServer(SEN_B_ID ,sen2_pm10_avg, sen2_pm25_avg, sen2_corr)){
+        displayMessage("Data 2 sent to server!!", TEXT_SIZE);
+        break;
+      } else {
+        displayMessage("Server connection failed, retrying...", TEXT_SIZE);
+        delay(1000);
+        initializeGSM();
+      }
     }
   }
   
@@ -205,7 +211,7 @@ void loop() {
 }
 
 // Sending data to server
-bool sendDataToServer(int index, int pm10, int pm25) {
+bool sendDataToServer(int index, int pm10, int pm25, int samp) {
   String response = "";
 
   // Initialize HTTP connection
@@ -215,7 +221,7 @@ bool sendDataToServer(int index, int pm10, int pm25) {
   if (response.equals("\r\nOK\r\n")){
     // Set the URL
     String command = "AT+HTTPPARA=\"URL\",\"http://www.yung.lk/airquality/record.php?id=";
-    command = command + index + "&battery=34&longitude=23.3434&latitude=23.232&data={ \\\"datapoints\\\": [ { \\\"time\\\": \\\"";
+    command = command + index + "&battery=34&longitude=" + samp + "&latitude=" + samp + "&data={ \\\"datapoints\\\": [ { \\\"time\\\": \\\"";
     command = command + hour + ":" + minute + ":" + second + "T" + day + ":" + month + ":" + year + "\\\", \\\"pm10\\\": ";
     command = command + pm10 + ", \\\"pm25\\\" : " + pm25 +" }]}\"";
     
