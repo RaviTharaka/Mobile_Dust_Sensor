@@ -1,11 +1,13 @@
 // Libraries
 #include "SPI.h"
+#include "SD.h"
 #include "Adafruit_GFX.h"
 #include "Adafruit_ILI9340.h"
 
 // Pins for the GSM module
 #define GSM_RX 19
 #define GSM_TX 18
+#define GSM_PWR 47
 
 // Pins for sensor A
 #define SEN1_ENB 22
@@ -73,6 +75,7 @@ void setup() {
   pinMode(SEN1_RST, OUTPUT);
   pinMode(SEN2_ENB, OUTPUT);
   pinMode(SEN2_RST, OUTPUT);
+  pinMode(GSM_PWR, OUTPUT);
   
   // Ports 
   digitalWrite(SEN1_ENB,HIGH);
@@ -94,8 +97,17 @@ void setup() {
   Serial2.begin(9600);
   Serial3.begin(9600);
 
+  // Initializing SD card
+  if (!SD.begin()){
+    displayMessage("SD card initializing failed", TEXT_SIZE); 
+  }
+
   // Initializing the GSM module
   Serial1.begin(9600);
+  delay(1000);
+  digitalWrite(GSM_PWR,HIGH);
+  delay(3000);
+  digitalWrite(GSM_PWR,LOW);
   initializeGSM();
 
   // Settle down
@@ -201,6 +213,27 @@ void loop() {
         initializeGSM();
       }
     }
+  }
+
+  // Write to SD card
+  displayMessage("Writing to SD card...", TEXT_SIZE);
+  File dataFile = SD.open("datalog.txt", FILE_WRITE);
+
+  if (dataFile) {
+    String dataString = "";
+    dataString = dataString + SEN_A_ID + " " + hour + ":" + minute + ":" + second + "T" + day + ":" + month + ":" + year;
+    dataString = dataString + " PM10: " + sen1_pm10_avg + " PM2.5: " + sen1_pm25_avg + "\r\n";
+    dataFile.println(dataString);
+  
+    dataString = "";
+    dataString = dataString + SEN_B_ID + " " + hour + ":" + minute + ":" + second + "T" + day + ":" + month + ":" + year;
+    dataString = dataString + " PM10: " + sen2_pm10_avg + " PM2.5: " + sen2_pm25_avg + "\r\n";
+    dataFile.println(dataString);
+     
+    dataFile.close();
+    displayMessage("Writing complete!!", TEXT_SIZE);
+  } else {
+    displayMessage("Error with the SD writing", TEXT_SIZE);
   }
   
   delay(10000);
