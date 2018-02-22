@@ -41,7 +41,7 @@ int SEN_B_ID = 10002;     // Unique ID for sensor B
 
 // Sensor types
 int sen1 = 7003;
-int sen2 = 5003;
+int sen2 = 23;
 
 // Data from sensors
 int sen1_pm25 = 0;
@@ -469,60 +469,105 @@ int sensorDataAvailable_1(void){
 
 // Return 0 = Timeout, 1 = CRC Error
 int sensorDataAvailable_2(void){
-  // Spin until we hear meassage header byte
-  long startTime = millis();
-
-  while (1){
-    while (!Serial3.available()){
-      delay(1);
-      if (millis() - startTime > TIMEOUT_SEN) 
+  if (sen2 == 23) {
+    //Spin until we hear meassage header byte
+    long startTime = millis();
+  
+    while (1)
+    {
+      while (!Serial3.available())
+      {
+        delay(1);
+        if (millis() - startTime > 1500) 
         return 0; //Timeout error
+      }
+  
+      if (Serial3.read() == 0xAA) break; //We have the message header
+    }
+    
+    //Read the next 9 bytes
+    byte sensorValue[10];
+    for (byte spot = 1 ; spot < 10 ; spot++)
+    {
+      startTime = millis();
+      while (!Serial3.available())
+      {
+        delay(1);
+        if (millis() - startTime > 1500) return (false); //Timeout error
+      }
+  
+      sensorValue[spot] = Serial3.read();
     }
 
-    if (Serial3.read() == 0x42) 
-      break; // We have first part of header
-  }
+    //Check CRC
+    byte crc = 0;
+    for (byte x = 2 ; x < 8 ; x++) //DATA1+DATA2+...+DATA6
+      crc += sensorValue[x];
+    if (crc != sensorValue[8])
+      return 1; //CRC error
   
-  while (1){
-    while (!Serial3.available()){
-      delay(1);
-      if (millis() - startTime > TIMEOUT_SEN) 
-        return 0; // Timeout error
+    //Update the global variables
+    sen2_pm25 = ((float)sensorValue[3] * 256 + sensorValue[2]) / 10;
+    sen2_pm10 = ((float)sensorValue[5] * 256 + sensorValue[4]) / 10;
+  
+    return 2;
+    
+  } else {
+    // Spin until we hear meassage header byte
+    long startTime = millis();
+    
+    while (1){
+      while (!Serial3.available()){
+        delay(1);
+        if (millis() - startTime > TIMEOUT_SEN) 
+          return 0; //Timeout error
+      }
+    
+      if (Serial3.read() == 0x42) 
+        break; // We have first part of header
     }
-
-    if (Serial3.read() == 0x4d) 
-      break; // We have the complete message header
-  }
-
-  // Read the next 30 bytes
-  byte sensorValue[30];
-  for (byte spot = 0 ; spot < 30 ; spot++){
-    startTime = millis();
-    while (!Serial3.available()){
-      delay(1);
-      if (millis() - startTime > TIMEOUT_SEN) 
-        return 0; // Timeout error
+    
+    while (1){
+      while (!Serial3.available()){
+        delay(1);
+        if (millis() - startTime > TIMEOUT_SEN) 
+          return 0; // Timeout error
+      }
+    
+      if (Serial3.read() == 0x4d) 
+        break; // We have the complete message header
     }
-    sensorValue[spot] = Serial3.read();
+    
+    // Read the next 30 bytes
+    byte sensorValue[30];
+    for (byte spot = 0 ; spot < 30 ; spot++){
+      startTime = millis();
+      while (!Serial3.available()){
+        delay(1);
+        if (millis() - startTime > TIMEOUT_SEN) 
+          return 0; // Timeout error
+      }
+      sensorValue[spot] = Serial3.read();
+    }
+    
+    // Check CRC
+    int crc = 66 + 77;
+    for (byte spot = 0 ; spot < 28 ; spot++){
+      crc += sensorValue[spot];
+    }
+    if (crc != sensorValue[29] + 256 * sensorValue[28])
+      return 1; // CRC error
+    
+    // Update the global variables
+    if (sen2 = 5003){
+      sen2_pm25 = ((float)sensorValue[4] * 256 + sensorValue[5]);
+      sen2_pm10 = ((float)sensorValue[6] * 256 + sensorValue[7]);
+    } else if (sen2 = 7003) {
+      sen2_pm25 = ((float)sensorValue[4] * 256 + sensorValue[5]);
+      sen2_pm10 = ((float)sensorValue[6] * 256 + sensorValue[7]);
+    }
+    return 2; // We've got a good reading!
   }
-  
-  // Check CRC
-  int crc = 66 + 77;
-  for (byte spot = 0 ; spot < 28 ; spot++){
-    crc += sensorValue[spot];
-  }
-  if (crc != sensorValue[29] + 256 * sensorValue[28])
-    return 1; // CRC error
-  
-  // Update the global variables
-  if (sen2 = 5003){
-    sen2_pm25 = ((float)sensorValue[4] * 256 + sensorValue[5]);
-    sen2_pm10 = ((float)sensorValue[6] * 256 + sensorValue[7]);
-  } else if (sen2 = 7003) {
-    sen2_pm25 = ((float)sensorValue[4] * 256 + sensorValue[5]);
-    sen2_pm10 = ((float)sensorValue[6] * 256 + sensorValue[7]);
-  }
-  return 2; // We've got a good reading!
 }
 
 void displayMessage(String text, int text_size) {
