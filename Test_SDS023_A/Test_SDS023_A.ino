@@ -16,10 +16,6 @@
   Serial.print it out at 9600 baud to serial monitor.
 */
 
-#include <SoftwareSerial.h>
-
-SoftwareSerial particleSensor(10, 11); // RX, TX
-
 float pm25; //2.5um particles detected in ug/m3
 float pm10; //10um particles detected in ug/m3
 
@@ -28,7 +24,7 @@ void setup()
   Serial.begin(9600);
   Serial.println("Particle Sensor Example");
 
-  particleSensor.begin(9600); //SDS021 reports at 1Hz at 9600bps
+  Serial3.begin(9600); //SDS021 reports at 1Hz at 9600bps
 }
 
 void loop()
@@ -60,13 +56,13 @@ boolean dataAvailable(void)
 
   while (1)
   {
-    while (!particleSensor.available())
+    while (!Serial3.available())
     {
       delay(1);
       if (millis() - startTime > 1500) return (false); //Timeout error
     }
 
-    if (particleSensor.read() == 0xAA) break; //We have the message header
+    if (Serial3.read() == 0xAA) break; //We have the message header
   }
 
   //Read the next 9 bytes
@@ -74,13 +70,13 @@ boolean dataAvailable(void)
   for (byte spot = 1 ; spot < 10 ; spot++)
   {
     startTime = millis();
-    while (!particleSensor.available())
+    while (!Serial3.available())
     {
       delay(1);
       if (millis() - startTime > 1500) return (false); //Timeout error
     }
 
-    sensorValue[spot] = particleSensor.read();
+    sensorValue[spot] = Serial3.read();
   }
 
   //Check CRC
@@ -96,3 +92,4 @@ boolean dataAvailable(void)
 
   return (true); //We've got a good reading!
 }
+

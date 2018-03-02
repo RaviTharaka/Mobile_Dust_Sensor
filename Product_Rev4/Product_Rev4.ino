@@ -156,34 +156,44 @@ void loop() {
     
     String text = "SenA - PM2.5:";
     text = text + sen1_pm25_avg + "\r\n       PM10:" + sen1_pm10_avg + "\r\n       smpl:" + sen1_corr;
-    displayMessage(text , 2);
+    //displayMessage(text , 2);
   } else {
     String text = "SenA : Only ";
     text = text + sen1_corr + " data is correct";
-    displayMessage(text , 2);
+    //displayMessage(text , 2);
     text = "Log : ";
     for (int i = 0; i < TOTAL_READING; i++) {
       text = text + sen1_status[i]; 
     }
-    displayMessage(text, 2);
+    //displayMessage(text, 2);
   }
+  
 
   if (sen2_corr > CORR_READING) {
     sen2_pm25_avg = sen2_pm25_avg / sen2_corr;
     sen2_pm10_avg = sen2_pm10_avg / sen2_corr;
     
-    String text = "SenB - PM2.5:";
-    text = text + sen2_pm25_avg + "\r\n       PM10:" + sen2_pm10_avg + "\r\n       smpl:" + sen2_corr;
-    displayMessage(text , 2);
+    String text = "Sensor - SDS021";
+    text = text + "\r\n PM2.5   : " + ((sen2_pm25_avg - 3.5672) / 1.7469) + "\r\n PM10    : " + ((sen2_pm10_avg + 15.591) / 1.6189) + "\r\n Samples : " + sen2_corr;
+    displayMessage(text , 3);
   } else {
-    String text = "SenB : Only ";
+    String text = "Sensor SDS021 : Only ";
     text = text + sen2_corr + " data is correct";
     displayMessage(text , 2);
     text = "Log : ";
     for (int i = 0; i < TOTAL_READING; i++) {
       text = text + sen2_status[i]; 
     }
-    displayMessage(text, 2);
+    //displayMessage(text, 2);
+    if (sen1_corr > CORR_READING) {
+      text = "Sensor - PM7003";
+      text = text + "\r\n PM2.5   : " + (sen1_pm25_avg * 0.9716 - 10.003) + "\r\n PM10    : " + (sen1_pm10_avg * 1.0109 - 10.037) + "\r\n Samples : " + sen1_corr;
+      displayMessage(text , 3);
+    } else {
+      String text = "Sensor PM7003 : Only";
+      text = text + sen1_corr + " data is correct";
+      displayMessage(text , 2);
+    }
   }
 
   // Sending data to server
