@@ -40,8 +40,8 @@ int SEN_A_ID = 10003;     // Unique ID for sensor A
 int SEN_B_ID = 10010;     // Unique ID for sensor B
 
 // Sensor types
-int sen1 = 23;
-int sen2 = 23;
+int sen1 = 21;
+int sen2 = 0;
 
 // Data from sensors
 int sen1_pm25 = 0;
@@ -64,6 +64,10 @@ int day = 0;
 int hour = 0;
 int minute = 0;
 int second = 0;
+
+// GPS Location
+double latitude = 0;
+double longtitude = 0;
 
 // Initialize display
 Adafruit_ILI9340 disp = Adafruit_ILI9340(DISP_CS, DISP_DC, DISP_MOSI, DISP_SCLK, DISP_RST, DISP_MISO);
@@ -149,50 +153,46 @@ void loop() {
   while (!getTime()) {
     initializeGSM();
   }
+
+  // If possible get GPS coordinate
+  if (getGPS()){
+    String gps_text = "GPS location - Lat ";
+    gps_text = gps_text + latitude + ", Lon " + longtitude;
+    displayMessage(gps_text , 1);
+  } else {
+    displayMessage("GPS location failed", 1);
+  }
+  
+  if (sen2_corr > CORR_READING) {
+    sen2_pm25_avg = sen2_pm25_avg / sen2_corr;
+    sen2_pm10_avg = sen2_pm10_avg / sen2_corr;
+  }
   
   if (sen1_corr > CORR_READING) {
     sen1_pm25_avg = sen1_pm25_avg / sen1_corr;
     sen1_pm10_avg = sen1_pm10_avg / sen1_corr;
     
-    String text = "SenA - PM2.5:";
-    text = text + sen1_pm25_avg + "\r\n       PM10:" + sen1_pm10_avg + "\r\n       smpl:" + sen1_corr;
-    //displayMessage(text , 2);
+    String text = "Sensor -";
+    text = text + " " + sen1 +"\r\n PM2.5   : " + ((sen1_pm25_avg - 3.5672) / 1.7469) + "\r\n PM10    : " + ((sen1_pm10_avg + 15.591) / 1.6189) + "\r\n Samples : " + sen1_corr;
+    displayMessage(text , 3);
   } else {
-    String text = "SenA : Only ";
-    text = text + sen1_corr + " data is correct";
-    //displayMessage(text , 2);
+    String text = "Sensor -";
+    text = text + " " + sen1 + " : Only " + sen1_corr + " data is correct";
+    displayMessage(text , 2);
     text = "Log : ";
     for (int i = 0; i < TOTAL_READING; i++) {
       text = text + sen1_status[i]; 
     }
-    //displayMessage(text, 2);
-  }
-  
-
-  if (sen2_corr > CORR_READING) {
-    sen2_pm25_avg = sen2_pm25_avg / sen2_corr;
-    sen2_pm10_avg = sen2_pm10_avg / sen2_corr;
+    displayMessage(text, 2);
     
-    String text = "Sensor - SDS021";
-    text = text + "\r\n PM2.5   : " + ((sen2_pm25_avg - 3.5672) / 1.7469) + "\r\n PM10    : " + ((sen2_pm10_avg + 15.591) / 1.6189) + "\r\n Samples : " + sen2_corr;
-    displayMessage(text , 3);
-  } else {
-    String text = "Sensor SDS021 : Only ";
-    text = text + sen2_corr + " data is correct";
-    displayMessage(text , 2);
-    text = "Log : ";
-    for (int i = 0; i < TOTAL_READING; i++) {
-      text = text + sen2_status[i]; 
-    }
-    //displayMessage(text, 2);
-    if (sen1_corr > CORR_READING) {
-      text = "Sensor - PM7003";
-      text = text + "\r\n PM2.5   : " + (sen1_pm25_avg * 0.9716 - 10.003) + "\r\n PM10    : " + (sen1_pm10_avg * 1.0109 - 10.037) + "\r\n Samples : " + sen1_corr;
-      displayMessage(text , 3);
+    if (sen2_corr > CORR_READING) {
+      text = "Sensor -";
+      text = text + " " + sen2 + "\r\n PM2.5   : " + (sen2_pm25_avg * 0.9716 - 10.003) + "\r\n PM10    : " + (sen2_pm10_avg * 1.0109 - 10.037) + "\r\n Samples : " + sen2_corr;
+      //displayMessage(text , 3);
     } else {
-      String text = "Sensor PM7003 : Only";
-      text = text + sen1_corr + " data is correct";
-      displayMessage(text , 2);
+      String text = "Sensor -";
+      text = text + " " + sen2 + " : Only" + sen2_corr + " data is correct";
+      //displayMessage(text , 2);
     }
   }
 
@@ -230,15 +230,20 @@ void loop() {
   File dataFile = SD.open("datalog.txt", FILE_WRITE);
 
   if (dataFile) {
-    String dataString = "";
-    dataString = dataString + SEN_A_ID + " " + hour + ":" + minute + ":" + second + "T" + day + ":" + month + ":" + year;
-    dataString = dataString + " PM10: " + sen1_pm10_avg + " PM2.5: " + sen1_pm25_avg + "\r\n";
-    dataFile.println(dataString);
-  
-    dataString = "";
-    dataString = dataString + SEN_B_ID + " " + hour + ":" + minute + ":" + second + "T" + day + ":" + month + ":" + year;
-    dataString = dataString + " PM10: " + sen2_pm10_avg + " PM2.5: " + sen2_pm25_avg + "\r\n";
-    dataFile.println(dataString);
+    String dataString;
+    if (sen1 != 0) {
+      dataString = "";
+      dataString = dataString + SEN_A_ID + " " + hour + ":" + minute + ":" + second + "T" + day + ":" + month + ":" + year;
+      dataString = dataString + " PM10: " + sen1_pm10_avg + " PM2.5: " + sen1_pm25_avg + "\r\n";
+      dataFile.println(dataString);
+    }
+
+    if (sen2 != 0) {
+      dataString = "";
+      dataString = dataString + SEN_B_ID + " " + hour + ":" + minute + ":" + second + "T" + day + ":" + month + ":" + year;
+      dataString = dataString + " PM10: " + sen2_pm10_avg + " PM2.5: " + sen2_pm25_avg + "\r\n";
+      dataFile.println(dataString);
+    }
      
     dataFile.close();
     displayMessage("Writing complete!!", TEXT_SIZE);
@@ -357,6 +362,33 @@ void initializeGSM(){
   }
 }
 
+bool getGPS(){
+  displayMessage("Getting GPS location...", TEXT_SIZE);
+  
+  String response = sendData("AT+CGPSPWR=1", TIMEOUT_GSM, 1);
+  if (response.equals("\r\nOK\r\n")){
+    response = sendData("AT+CGPSSTATUS?", TIMEOUT_GSM, 1);
+    if (response.equals("\r\n+CGPSSTATUS: Location 3D Fix\r\n\r\nOK\r\n")){
+      response = sendData("AT+CGPSINF=0", TIMEOUT_GSM, 1);
+
+      // Parsing the response
+      if (response.substring(0,14).equals("\r\n+CGPSINF: 0,")){
+        longtitude = response.substring(14,24).toDouble();
+        latitude = response.substring(25,36).toDouble();
+        return true;
+      } else {
+        displayMessage("GPS location format error", TEXT_SIZE);
+      }
+    } else {
+      displayMessage("GPS location still unfixed", TEXT_SIZE);
+    }
+  } else {
+    displayMessage("GPS module power-on failure", TEXT_SIZE);
+  }
+
+  return false;
+}
+
 bool getTime(){
   displayMessage("Getting time...", TEXT_SIZE);
   
@@ -428,69 +460,115 @@ String sendData(String command, const int timeout, boolean debug){
   return response;
 }
 
-// Return 0 = Timeout, 1 = CRC Error, 2 = Success
+// Return 0 = Timeout, 1 = CRC Error, 2 = Success, 3 = No sensor
 int sensorDataAvailable_1(void){
-  // Spin until we hear meassage header byte
-  long startTime = millis();
-
-  while (1){
-    while (!Serial2.available()){
-      delay(1);
-      if (millis() - startTime > TIMEOUT_SEN) 
+  if (sen1 == 21) {
+    //Spin until we hear meassage header byte
+    long startTime = millis();
+  
+    while (1)
+    {
+      while (!Serial2.available())
+      {
+        delay(1);
+        if (millis() - startTime > 1500) 
         return 0; //Timeout error
-    }
-
-    if (Serial2.read() == 0x42) 
-      break; // We have first part of header
-  }
+      }
   
-  while (1){
-    while (!Serial2.available()){
-      delay(1);
-      if (millis() - startTime > TIMEOUT_SEN) 
-        return 0; // Timeout error
+      if (Serial2.read() == 0xAA) break; //We have the message header
     }
-
-    if (Serial2.read() == 0x4d) 
-      break; // We have the complete message header
-  }
-
-  // Read the next 30 bytes
-  byte sensorValue[30];
-  for (byte spot = 0 ; spot < 30 ; spot++){
-    startTime = millis();
-    while (!Serial2.available()){
-      delay(1);
-      if (millis() - startTime > TIMEOUT_SEN) 
-        return 0; // Timeout error
-    }
-    sensorValue[spot] = Serial2.read();
     
-  }
+    //Read the next 9 bytes
+    byte sensorValue[10];
+    for (byte spot = 1 ; spot < 10 ; spot++)
+    {
+      startTime = millis();
+      while (!Serial2.available())
+      {
+        delay(1);
+        if (millis() - startTime > 1500) return (false); //Timeout error
+      }
   
-  // Check CRC
-  int crc = 66 + 77;
-  for (byte spot = 0 ; spot < 28 ; spot++){
-    crc += sensorValue[spot];
-  }
-  if (crc != sensorValue[29] + 256 * sensorValue[28])
-    return 1; // CRC error
+      sensorValue[spot] = Serial2.read();
+    }
+
+    //Check CRC
+    byte crc = 0;
+    for (byte x = 2 ; x < 8 ; x++) //DATA1+DATA2+...+DATA6
+      crc += sensorValue[x];
+    if (crc != sensorValue[8])
+      return 1; //CRC error
   
-  // Update the global variables
-  if (sen1 = 5003){
-    sen1_pm25 = ((float)sensorValue[4] * 256 + sensorValue[5]);
-    sen1_pm10 = ((float)sensorValue[6] * 256 + sensorValue[7]);
-  } else if (sen1 = 7003) {
-    sen1_pm25 = ((float)sensorValue[4] * 256 + sensorValue[5]);
-    sen1_pm10 = ((float)sensorValue[6] * 256 + sensorValue[7]);
+    //Update the global variables
+    sen1_pm25 = ((float)sensorValue[3] * 256 + sensorValue[2]) / 10;
+    sen1_pm10 = ((float)sensorValue[5] * 256 + sensorValue[4]) / 10;
+  
+    return 2;
+    
+  } else if (sen1 == 7003 | sen1 == 5003) {
+    // Spin until we hear meassage header byte
+    long startTime = millis();
+    
+    while (1){
+      while (!Serial2.available()){
+        delay(1);
+        if (millis() - startTime > TIMEOUT_SEN) 
+          return 0; //Timeout error
+      }
+    
+      if (Serial2.read() == 0x42) 
+        break; // We have first part of header
+    }
+    
+    while (1){
+      while (!Serial2.available()){
+        delay(1);
+        if (millis() - startTime > TIMEOUT_SEN) 
+          return 0; // Timeout error
+      }
+    
+      if (Serial2.read() == 0x4d) 
+        break; // We have the complete message header
+    }
+    
+    // Read the next 30 bytes
+    byte sensorValue[30];
+    for (byte spot = 0 ; spot < 30 ; spot++){
+      startTime = millis();
+      while (!Serial2.available()){
+        delay(1);
+        if (millis() - startTime > TIMEOUT_SEN) 
+          return 0; // Timeout error
+      }
+      sensorValue[spot] = Serial2.read();
+    }
+    
+    // Check CRC
+    int crc = 66 + 77;
+    for (byte spot = 0 ; spot < 28 ; spot++){
+      crc += sensorValue[spot];
+    }
+    if (crc != sensorValue[29] + 256 * sensorValue[28])
+      return 1; // CRC error
+    
+    // Update the global variables
+    if (sen1 == 5003){
+      sen1_pm25 = ((float)sensorValue[4] * 256 + sensorValue[5]);
+      sen1_pm10 = ((float)sensorValue[6] * 256 + sensorValue[7]);
+    } else if (sen1 == 7003) {
+      sen1_pm25 = ((float)sensorValue[4] * 256 + sensorValue[5]);
+      sen1_pm10 = ((float)sensorValue[6] * 256 + sensorValue[7]);
+    }
+    return 2; // We've got a good reading!
+  } else {
+    return 3; // Sensor is unconnected
   }
-  return 2; // We've got a good reading!
 }
 
 
 // Return 0 = Timeout, 1 = CRC Error
 int sensorDataAvailable_2(void){
-  if (sen2 == 23) {
+  if (sen2 == 21) {
     //Spin until we hear meassage header byte
     long startTime = millis();
   
@@ -533,7 +611,7 @@ int sensorDataAvailable_2(void){
   
     return 2;
     
-  } else {
+  } else if (sen2 == 5003 | sen2 == 7003) {
     // Spin until we hear meassage header byte
     long startTime = millis();
     
@@ -580,14 +658,16 @@ int sensorDataAvailable_2(void){
       return 1; // CRC error
     
     // Update the global variables
-    if (sen2 = 5003){
+    if (sen2 == 5003){
       sen2_pm25 = ((float)sensorValue[4] * 256 + sensorValue[5]);
       sen2_pm10 = ((float)sensorValue[6] * 256 + sensorValue[7]);
-    } else if (sen2 = 7003) {
+    } else if (sen2 == 7003) {
       sen2_pm25 = ((float)sensorValue[4] * 256 + sensorValue[5]);
       sen2_pm10 = ((float)sensorValue[6] * 256 + sensorValue[7]);
     }
     return 2; // We've got a good reading!
+  } else {
+    return 3; // Sensor is unconnected
   }
 }
 
