@@ -269,7 +269,7 @@ bool sendDataToServer(int index, int pm10, int pm25) {
   if (response.equals("\r\nOK\r\n")){
     // Set the URL
     String command = "AT+HTTPPARA=\"URL\",\"http://www.yung.lk/airquality/record.php?id=";
-    command = command + index + "&battery=34&longitude=23.3434&latitude=23.232&data={ \\\"datapoints\\\": [ { \\\"time\\\": \\\"";
+    command = command + index + "&battery=34&longitude="+ longtitude +"&latitude=" + latitude + "&data={ \\\"datapoints\\\": [ { \\\"time\\\": \\\"";
     command = command + hour + ":" + minute + ":" + second + "T" + day + ":" + month + ":" + year + "\\\", \\\"pm10\\\": ";
     command = command + pm10 + ", \\\"pm25\\\" : " + pm25 +" }]}\"";
     

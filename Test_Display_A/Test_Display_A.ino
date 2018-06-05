@@ -24,16 +24,19 @@ void setup() {
   pinMode(LCD_VSS, OUTPUT);
 
   digitalWrite(LCD_RW, LOW);
-  analogWrite(LCD_CNTRST, 128);
+  analogWrite(LCD_CNTRST, 150);
   digitalWrite(LCD_VDD, HIGH);
   digitalWrite(LCD_VSS, LOW);
 
   Serial.begin(9600);
   
   // set up the LCD's number of columns and rows:
+  lcd.clear();
   lcd.begin(16, 2);
   // Print a message to the LCD.
-  lcd.print("Hello world!!");
+  lcd.print("Hello");
+  lcd.setCursor(0, 1);
+  
 }
 
 void loop() {

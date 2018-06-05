@@ -453,8 +453,8 @@ String sendData(String command, const int timeout, boolean debug){
   if(debug){
     Serial.print(response);
   }    
-    return response;
-  }
+  return response;
+}
 
 // Return 0 = Timeout, 1 = CRC Error, 2 = Success
 int sensorDataAvailable_1(void){
