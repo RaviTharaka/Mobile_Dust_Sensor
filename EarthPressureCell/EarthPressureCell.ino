@@ -108,7 +108,8 @@ void loop() {
   sen_load_avg = 0;
   
   displayMessage("Collecting data from sensors...");
-  
+
+  lcd.clear();
   lcd.setCursor(0, 1);
   lcd.print("Loadcell : ");
   
@@ -143,16 +144,22 @@ void loop() {
   }
   
   sen_load_avg = sen_load_avg / TOTAL_READING;
+  sen_load_avg = sen_load_avg * 1 + 0;              // change calibration here************************************************
   
   String text = "Load cell : ";
-  text = text + "" + (sen_load_avg) + "\r\n Samples : " + TOTAL_READING;      // change calibration here
+  text = text + "" + (sen_load_avg) + "\r\n Samples : " + TOTAL_READING;      
   displayMessage(text);
   
   // Sending data to server
+  lcd.clear();
+  lcd.setCursor(0,0);
+  lcd.print("Send int...");
+  
   displayMessage("Sending to server...");
   for (int i = 0; i < 3; i++) {
     if (sendDataToServer(sen_load_avg)){
       displayMessage("Data sent to server!!");
+      lcd.print("OKAY");
       break;
     } else {
       displayMessage("Server connection failed, retrying...");
@@ -162,6 +169,8 @@ void loop() {
   }
 
   // Write to SD card
+  lcd.setCursor(0,1);
+  lcd.print("Store SD...");
   displayMessage("Writing to SD card...");
   File dataFile = SD.open("datalog.txt", FILE_WRITE);
 
@@ -174,8 +183,10 @@ void loop() {
      
     dataFile.close();
     displayMessage("Writing complete!!");
+    lcd.print("OKAY");
   } else {
     displayMessage("Error with the SD writing");
+    lcd.print("FAIL");
   }
   
   delay(10000);
@@ -219,7 +230,10 @@ void initializeGSM(){
 
   // GSM operation verification
   displayMessage("GSM Verifying...");
+  
   while (1){
+    lcd.setCursor(0,1);
+    lcd.print("GSM...");
     // GSM echo mode off
     sendData("ATE0", TIMEOUT_GSM, 1);
     delay(1000);
@@ -227,16 +241,19 @@ void initializeGSM(){
     // POST on GSM module
     response = sendData("AT+CFUN?", TIMEOUT_GSM, 1);
     if (response.equals("AT+CFUN?\r\n\r\n+CFUN: 1\r\n\r\nOK\r\n")){
+      lcd.print("A");
       // SIM functional verification
       response = sendData("AT+CPIN?", TIMEOUT_GSM, 1);
       if (response.equals("AT+CPIN?\r\n\r\n+CPIN: READY\r\n\r\nOK\r\n")){
         displayMessage("GSM module functional");
+        lcd.print("B");
         
         // Register with the service provider
         displayMessage("Connecting...");
         for (int i = 0; i < 3; i++) {
           response = sendData("AT+CREG?", TIMEOUT_GSM, 1);
           if (response.equals("AT+CREG?\r\n\r\n+CREG: 0,1\r\n\r\nOK\r\n")){
+            lcd.print("C");
             displayMessage("Connection established");
             
             // Establish GPRS connection and get the time
@@ -244,6 +261,7 @@ void initializeGSM(){
             for (int j = 0; j < 3; j++) {
               if (connectGPRS()) {
                 if (getTime()) {
+                  lcd.print("D");
                   displayMessage("GSM functional!!");
                   delay(1000);
                   return; 
@@ -276,17 +294,24 @@ void initializeGSM(){
 
 bool getGPS(){
   displayMessage("Getting GPS location...");
-  
+  lcd.clear();
+  lcd.setCursor(0,0);
+  lcd.print("GPS...");
+    
   String response = sendData("AT+CGPSPWR=1", TIMEOUT_GSM, 1);
   if (response.equals("AT+CGPSPWR=1\r\n\r\nOK\r\n")){
     response = sendData("AT+CGPSSTATUS?", TIMEOUT_GSM, 1);
+    lcd.print("A");
+  
     if (response.equals("AT+CGPSSTATUS?\r\n+CGPSSTATUS: Location 3D Fix\r\n\r\nOK\r\n")){
+      lcd.print("B");
       response = sendData("AT+CGPSINF=0", TIMEOUT_GSM, 1);
 
       // Parsing the response
       if (response.substring(14,28).equals("\r\n+CGPSINF: 0,")){
         longtitude = response.substring(28,38).toDouble();
         latitude = response.substring(39,50).toDouble();
+        lcd.print("C");
         return true;
       } else {
         displayMessage("GPS location format error");
@@ -297,7 +322,7 @@ bool getGPS(){
   } else {
     displayMessage("GPS module power-on failure");
   }
-
+  lcd.print("FAIL");
   return false;
 }
 

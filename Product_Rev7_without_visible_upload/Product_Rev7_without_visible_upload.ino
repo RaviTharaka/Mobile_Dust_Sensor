@@ -36,7 +36,7 @@ int TIMEOUT_SEN = 1500;   // Timeout period for sensor reading
 int TIMEOUT_GSM = 1000;   // Timeout period for GSM module
 int TEXT_SIZE = 1;        // Display text size
 
-int SEN_A_ID = 10003;     // Unique ID for sensor A
+int SEN_A_ID = 10005;     // Unique ID for sensor A
 int SEN_B_ID = 10010;     // Unique ID for sensor B
 
 // Sensor types
@@ -95,7 +95,7 @@ void setup() {
   
   // Serial port to computer
   Serial.begin(9600);
-  displayMessage("Initialzing...", TEXT_SIZE);  
+  displayMessage("Initialzing...", TEXT_SIZE, 1);  
 
   // Serial port to sensors 
   Serial2.begin(9600);
@@ -103,7 +103,7 @@ void setup() {
 
   // Initializing SD card
   if (!SD.begin()){
-    displayMessage("SD card initializing failed", TEXT_SIZE); 
+    displayMessage("SD card initializing failed", TEXT_SIZE, 1); 
   }
 
   // Initializing the GSM module
@@ -130,7 +130,11 @@ void loop() {
   sen2_pm25_avg = 0;
   sen2_corr = 0;
 
-  displayMessage("Collecting data from sensors...", TEXT_SIZE);
+  disp.fillScreen(ILI9340_BLACK);
+  disp.setCursor(0, 0);
+  textline = 0;
+  
+  displayMessage("Collecting data from sensors...", TEXT_SIZE, 1);
   
   for (int i = 0; i < TOTAL_READING; i++) {
     sen1_status[i] = sensorDataAvailable_1();
@@ -150,17 +154,11 @@ void loop() {
   }
 
   // Display Time
-  while (!getTime()) {
+  for (int i = 0; i < 2; i = i + 1) {
+    if(getTime()){
+      break;
+    }
     initializeGSM();
-  }
-
-  // If possible get GPS coordinate
-  if (getGPS()){
-    String gps_text = "GPS location - Lat ";
-    gps_text = gps_text + latitude + ", Lon " + longtitude;
-    displayMessage(gps_text , 1);
-  } else {
-    displayMessage("GPS location failed", 1);
   }
   
   if (sen2_corr > CORR_READING) {
@@ -173,21 +171,21 @@ void loop() {
     sen1_pm10_avg = sen1_pm10_avg / sen1_corr;
     
     String text = "Sensor -";
-    text = text + " " + sen1 +"\r\n PM2.5   : " + ((sen1_pm25_avg - 3.5672) / 1.7469) + "\r\n PM10    : " + ((sen1_pm10_avg + 15.591) / 1.6189) + "\r\n Samples : " + sen1_corr;
-    displayMessage(text , 3);
+    text = text + " " + sen1 +"\r\n PM2.5   : " + ((sen1_pm25_avg * 0.4189) + 3.9901) + "\r\n PM10    : " + ((sen1_pm10_avg * 0.5328) + 14.082) + "\r\n Samples : " + sen1_corr;
+    displayMessage(text, 3, 1);
   } else {
     String text = "Sensor -";
     text = text + " " + sen1 + " : Only " + sen1_corr + " data is correct";
-    displayMessage(text , 2);
+    displayMessage(text, 2, 1);
     text = "Log : ";
     for (int i = 0; i < TOTAL_READING; i++) {
       text = text + sen1_status[i]; 
     }
-    displayMessage(text, 2);
+    displayMessage(text, 2, 1);
     
     if (sen2_corr > CORR_READING) {
       text = "Sensor -";
-      text = text + " " + sen2 + "\r\n PM2.5   : " + (sen2_pm25_avg * 0.9716 - 10.003) + "\r\n PM10    : " + (sen2_pm10_avg * 1.0109 - 10.037) + "\r\n Samples : " + sen2_corr;
+      text = text + " " + sen2 + "\r\n PM2.5   : " + (sen2_pm25_avg * 0.4189 + 3.9901) + "\r\n PM10    : " + (sen2_pm10_avg * 0.5328 + 14.082) + "\r\n Samples : " + sen2_corr;
       //displayMessage(text , 3);
     } else {
       String text = "Sensor -";
@@ -198,13 +196,13 @@ void loop() {
 
   // Sending data to server
   if (sen1_corr > CORR_READING) {
-    displayMessage("Sensor 1 sending to server...", TEXT_SIZE);
-    for (int i = 0; i < 3; i++) {
+    displayMessage("Sensor 1 sending to server...", TEXT_SIZE, 0);
+    for (int i = 0; i < 1; i++) {
       if (sendDataToServer(SEN_A_ID ,sen1_pm10_avg, sen1_pm25_avg)){
-        displayMessage("Data 1 sent to server!!", TEXT_SIZE);
+        displayMessage("Data 1 sent to server!!", TEXT_SIZE, 0);
         break;
       } else {
-        displayMessage("Server connection failed, retrying...", TEXT_SIZE);
+        displayMessage("Server connection failed, retrying...", TEXT_SIZE, 0);
         delay(1000);
         initializeGSM();
       }
@@ -212,13 +210,13 @@ void loop() {
   }
 
   if (sen2_corr > CORR_READING) {
-    displayMessage("Sensor 2 sending to server...", TEXT_SIZE);
-    for (int i = 0; i < 3; i++) {
+    displayMessage("Sensor 2 sending to server...", TEXT_SIZE, 0);
+    for (int i = 0; i < 1; i++) {
       if (sendDataToServer(SEN_B_ID ,sen2_pm10_avg, sen2_pm25_avg)){
-        displayMessage("Data 2 sent to server!!", TEXT_SIZE);
+        displayMessage("Data 2 sent to server!!", TEXT_SIZE, 0);
         break;
       } else {
-        displayMessage("Server connection failed, retrying...", TEXT_SIZE);
+        displayMessage("Server connection failed, retrying...", TEXT_SIZE, 0);
         delay(1000);
         initializeGSM();
       }
@@ -226,7 +224,7 @@ void loop() {
   }
 
   // Write to SD card
-  displayMessage("Writing to SD card...", TEXT_SIZE);
+  displayMessage("Writing to SD card...", TEXT_SIZE, 1);
   File dataFile = SD.open("datalog.txt", FILE_WRITE);
 
   if (dataFile) {
@@ -246,15 +244,13 @@ void loop() {
     }
      
     dataFile.close();
-    displayMessage("Writing complete!!", TEXT_SIZE);
+    displayMessage("Writing complete!!", TEXT_SIZE, 1);
   } else {
-    displayMessage("Error with the SD writing", TEXT_SIZE);
+    displayMessage("Error with the SD writing", TEXT_SIZE, 1);
   }
   
   delay(10000);
-  disp.fillScreen(ILI9340_GREEN);
-  disp.setCursor(0, 0);
-  textline = 0;
+  
    
 }
 
@@ -282,7 +278,7 @@ bool sendDataToServer(int index, int pm10, int pm25) {
       if (temp.equals("\r\nOK\r\n\r\n+HTTPACTION: 0,200,")) {
         response = sendData("AT+HTTPREAD", TIMEOUT_GSM, 1);
         if (response.equals("\r\n+HTTPREAD: 8\r\nOKAY<br>\r\nOK\r\n")) {
-          displayMessage("URL accepted", TEXT_SIZE);
+          displayMessage("URL accepted", TEXT_SIZE, 0);
           return 1;
         }
       }
@@ -293,76 +289,77 @@ bool sendDataToServer(int index, int pm10, int pm25) {
 
 // Initializes the GSM module
 void initializeGSM(){
-  disp.fillScreen(ILI9340_BLACK);
-  disp.setCursor(0, 0);
-  textline = 0;
+  //disp.fillScreen(ILI9340_BLACK);
+  //disp.setCursor(0, 0);
+  //textline = 0;
   
   String response = "";
 
   // GSM operation verification
-  displayMessage("GSM Verifying...", TEXT_SIZE);
-  while (1){
-    // GSM echo mode off
-    sendData("ATE0", TIMEOUT_GSM, 1);
-    delay(1000);
-
-    // POST on GSM module
-    response = sendData("AT+CFUN?", TIMEOUT_GSM, 1);
-    if (response.equals("\r\n+CFUN: 1\r\n\r\nOK\r\n")){
-      // SIM functional verification
-      response = sendData("AT+CPIN?", TIMEOUT_GSM, 1);
-      if (response.equals("\r\n+CPIN: READY\r\n\r\nOK\r\n")){
-        displayMessage("GSM module functional", TEXT_SIZE);
-        
-        // Register with the service provider
-        displayMessage("Connecting...", TEXT_SIZE);
-        for (int i = 0; i < 3; i++) {
-          response = sendData("AT+CREG?", TIMEOUT_GSM, 1);
-          if (response.equals("\r\n+CREG: 0,1\r\n\r\nOK\r\n")){
-            displayMessage("Connection established", TEXT_SIZE);
-            
-            // Establish GPRS connection and get the time
-            displayMessage("GPRS connecting...", TEXT_SIZE);
-            for (int j = 0; j < 3; j++) {
-              if (connectGPRS()) {
-                if (getTime()) {
-                  displayMessage("GSM functional!!", TEXT_SIZE);
-                  delay(1000);
+  displayMessage("GSM Verifying...", TEXT_SIZE, 0);
   
-                  // Refreshing display
-                  disp.fillScreen(ILI9340_GREEN);
-                  disp.setCursor(0, 0);
-                  textline = 0; 
-                  return; 
-                } else {
-                  displayMessage("Time syncing failed!! Retrying...", TEXT_SIZE);
-                  delay(1000);
-                }
+  // GSM echo mode off
+  sendData("ATE0", TIMEOUT_GSM, 1);
+  delay(1000);
+
+  // POST on GSM module
+  response = sendData("AT+CFUN?", TIMEOUT_GSM, 1);
+  if (response.equals("\r\n+CFUN: 1\r\n\r\nOK\r\n")){
+    // SIM functional verification
+    response = sendData("AT+CPIN?", TIMEOUT_GSM, 1);
+    if (response.equals("\r\n+CPIN: READY\r\n\r\nOK\r\n")){
+      displayMessage("GSM module functional", TEXT_SIZE, 0);
+      
+      // Register with the service provider
+      displayMessage("Connecting...", TEXT_SIZE, 0);
+      for (int i = 0; i < 1; i++) {
+        response = sendData("AT+CREG?", TIMEOUT_GSM, 1);
+        if (response.equals("\r\n+CREG: 0,1\r\n\r\nOK\r\n")){
+          displayMessage("Connection established", TEXT_SIZE, 0);
+          
+          // Establish GPRS connection and get the time
+          displayMessage("GPRS connecting...", TEXT_SIZE, 0);
+          for (int j = 0; j < 1; j++) {
+            if (connectGPRS()) {
+              if (getTime()) {
+                displayMessage("GSM functional!!", TEXT_SIZE, 0);
+                delay(1000);
+
+                // Refreshing display
+                disp.fillScreen(ILI9340_GREEN);
+                disp.setCursor(0, 0);
+                textline = 0; 
+                return; 
               } else {
-                displayMessage("Connect GPRS failed!! Retrying...", TEXT_SIZE);
+                displayMessage("Time syncing failed!! Retrying...", TEXT_SIZE, 0);
                 delay(1000);
               }
+            } else {
+              displayMessage("Connect GPRS failed!! Retrying...", TEXT_SIZE, 0);
+              delay(1000);
             }
-          } else {
-            displayMessage("Connection error!! Retrying...", TEXT_SIZE);
-            delay(1000); 
           }
+        } else {
+          displayMessage("Connection error!! Retrying...", TEXT_SIZE, 0);
+          delay(1000); 
         }
-      } else {
-        displayMessage("GSM module SIM error!!", TEXT_SIZE);
-        delay(1000);
       }
     } else {
-      displayMessage("GSM module POST error!!", TEXT_SIZE);
+      displayMessage("GSM module SIM error!!", TEXT_SIZE, 0);
       delay(1000);
     }
-    displayMessage("GSM module error!! Retrying from beginning...", TEXT_SIZE);
-    delay(1000); 
+  } else {
+    displayMessage("GSM module POST error!!", TEXT_SIZE, 0);
+    delay(1000);
   }
+  displayMessage("GSM module error!! Retrying from beginning...", TEXT_SIZE, 0);
+  
+  delay(1000); 
+
 }
 
 bool getGPS(){
-  displayMessage("Getting GPS location...", TEXT_SIZE);
+  displayMessage("Getting GPS location...", TEXT_SIZE, 1);
   
   String response = sendData("AT+CGPSPWR=1", TIMEOUT_GSM, 1);
   if (response.equals("\r\nOK\r\n")){
@@ -376,20 +373,20 @@ bool getGPS(){
         latitude = response.substring(25,36).toDouble();
         return true;
       } else {
-        displayMessage("GPS location format error", TEXT_SIZE);
+        displayMessage("GPS location format error", TEXT_SIZE, 1);
       }
     } else {
-      displayMessage("GPS location still unfixed", TEXT_SIZE);
+      displayMessage("GPS location still unfixed", TEXT_SIZE, 1);
     }
   } else {
-    displayMessage("GPS module power-on failure", TEXT_SIZE);
+    displayMessage("GPS module power-on failure", TEXT_SIZE, 1);
   }
 
   return false;
 }
 
 bool getTime(){
-  displayMessage("Getting time...", TEXT_SIZE);
+  displayMessage("Getting time...", TEXT_SIZE, 0);
   
   String response = sendData("AT+CCLK?", TIMEOUT_GSM, 1);
 
@@ -403,10 +400,10 @@ bool getTime(){
     
     String text = "";
     text = text + "Time " + hour + ":" + minute + ":" + second + " on " + year + "/" + month + "/" + day;
-    displayMessage(text, TEXT_SIZE);
+    displayMessage(text, TEXT_SIZE, 0);
     return true;
   } else {
-    displayMessage("Time unavailable", TEXT_SIZE);
+    displayMessage("Time unavailable", TEXT_SIZE, 0);
     return false;
   }
   
@@ -420,10 +417,10 @@ bool connectGPRS(){
       
     String tempStr = response.substring(0,14);
     if (tempStr.equals("\r\n+SAPBR: 1,1,")){
-      displayMessage("GPRS Established", TEXT_SIZE);
+      displayMessage("GPRS Established", TEXT_SIZE, 0);
 
       // Get the time
-      displayMessage("Getting time via NTP...", TEXT_SIZE);
+      displayMessage("Getting time via NTP...", TEXT_SIZE, 0);
       response = sendData("AT+CNTPCID=1",TIMEOUT_GSM, 1);
       if (response.equals("\r\nOK\r\n")){
         response = sendData("AT+CNTP=\"pool.ntp.org\",22",TIMEOUT_GSM, 1);
@@ -431,7 +428,7 @@ bool connectGPRS(){
           response = sendData("AT+CNTP",TIMEOUT_GSM * 5, 1);
           if (response.equals("\r\nOK\r\n\r\n+CNTP: 1\r\n")){
             response = sendData("AT+CCLK?", TIMEOUT_GSM, 1);
-            displayMessage("Time sync successful", TEXT_SIZE);
+            //displayMessage("Time sync successful", TEXT_SIZE);
             return true;  
           }
         }
@@ -670,20 +667,22 @@ int sensorDataAvailable_2(void){
   }
 }
 
-void displayMessage(String text, int text_size) {
+void displayMessage(String text, int text_size, int send_to_display) {
   Serial.println(text);
-  
-  disp.setTextSize(text_size);
-  disp.setTextColor(ILI9340_BLUE);
+
+  if (send_to_display) {
+    disp.setTextSize(text_size);
+    disp.setTextColor(ILI9340_BLUE);
+      
+    if (textline < 25) {
+      textline = textline + text_size;
+    } else {
+      disp.fillScreen(ILI9340_GREEN);
+      disp.setCursor(0, 0);
+      textline = 0;
+    }
     
-  if (textline < 25) {
-    textline = textline + text_size;
-  } else {
-    disp.fillScreen(ILI9340_GREEN);
-    disp.setCursor(0, 0);
-    textline = 0;
+    disp.println(text);
   }
-  
-  disp.println(text);
 }
 
